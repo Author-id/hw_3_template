@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    environment:
+      GREETING: "${GREETING:-Hello from Compose!}"
+      STORAGE: sqlite
+      DATA_FILE: /data/counter.db
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8000"
+    volumes:
+      - sqlite_data:/data
+
+volumes:
+  sqlite_data:

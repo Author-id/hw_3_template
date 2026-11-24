@@ -1,0 +1,183 @@
+
+=== 4 балла. Один контейнер ===
+
+$ docker run -d --name hw3-single -p 127.0.0.1:8080:8000 -e GREETING=Hello from a container! counter:1
+docker: Error response from daemon: Conflict. The container name "/hw3-single" is already in use by container "35010a0afa004f75d9f35a6846c4446548d5cdf60f8c83f749bd6768b693b553". You have to remove (or rename) that container to be able to reuse that name.
+
+Run 'docker run --help' for more information
+
+$ docker run -d --name hw3-single -p 127.0.0.1:8080:8000 -e GREETING=Hello from a container! counter:1
+19643752c36e90054f00f7b264cbb8323868bafd379affecd26d8ccd6420cf85
+
+$ curl -sS -w \n http://127.0.0.1:8080/
+{"greeting": "Hello from a container!", "count": 0, "hostname": "19643752c36e", "storage": "sqlite"}
+
+$ curl -sS -w \n -X POST http://127.0.0.1:8080/increment
+{"greeting": "Hello from a container!", "count": 1, "hostname": "19643752c36e", "storage": "sqlite"}
+
+$ curl -sS -w \n http://127.0.0.1:8080/
+{"greeting": "Hello from a container!", "count": 1, "hostname": "19643752c36e", "storage": "sqlite"}
+
+$ docker stop hw3-single
+hw3-single
+
+$ docker rm hw3-single
+hw3-single
+
+=== 6 баллов. SQLite и именованный том ===
+
+$ docker compose ps
+NAME                  IMAGE               COMMAND              SERVICE   CREATED                  STATUS                  PORTS
+hw_3_template-app-1   hw_3_template-app   "python -u app.py"   app       Less than a second ago   Up Less than a second   127.0.0.1:8080->8000/tcp
+
+$ curl -sS -w \n -X POST http://127.0.0.1:8080/increment
+{"greeting": "Hello from Compose!", "count": 1, "hostname": "3a3ae981d39d", "storage": "sqlite"}
+
+$ curl -sS -w \n -X POST http://127.0.0.1:8080/increment
+{"greeting": "Hello from Compose!", "count": 2, "hostname": "3a3ae981d39d", "storage": "sqlite"}
+
+$ curl -sS -w \n http://127.0.0.1:8080/
+{"greeting": "Hello from Compose!", "count": 2, "hostname": "3a3ae981d39d", "storage": "sqlite"}
+
+$ docker compose down
+ Container hw_3_template-app-1 Stopping 
+ Container hw_3_template-app-1 Stopped 
+ Container hw_3_template-app-1 Removing 
+ Container hw_3_template-app-1 Removed 
+ Network hw_3_template_default Removing 
+ Network hw_3_template_default Removed 
+
+$ docker compose up -d
+ Network hw_3_template_default Creating 
+ Network hw_3_template_default Created 
+ Container hw_3_template-app-1 Creating 
+ Container hw_3_template-app-1 Created 
+ Container hw_3_template-app-1 Starting 
+ Container hw_3_template-app-1 Started 
+
+$ curl -sS -w \n http://127.0.0.1:8080/
+{"greeting": "Hello from Compose!", "count": 2, "hostname": "36e29ccdf878", "storage": "sqlite"}
+
+$ docker compose down
+ Container hw_3_template-app-1 Stopping 
+ Container hw_3_template-app-1 Stopped 
+ Container hw_3_template-app-1 Removing 
+ Container hw_3_template-app-1 Removed 
+ Network hw_3_template_default Removing 
+ Network hw_3_template_default Removed 
+
+=== 8 баллов. Приложение и Redis ===
+
+$ docker compose ps
+NAME                    IMAGE               COMMAND                  SERVICE   CREATED         STATUS                                     PORTS
+hw_3_template-app-1     hw_3_template-app   "python -u app.py"       app       3 seconds ago   Up Less than a second (health: starting)   127.0.0.1:8080->8000/tcp
+hw_3_template-redis-1   redis:7.4-alpine    "docker-entrypoint.s…"   redis     3 seconds ago   Up 3 seconds (healthy)                     6379/tcp
+
+$ docker compose ps
+NAME                    IMAGE               COMMAND                  SERVICE   CREATED              STATUS                        PORTS
+hw_3_template-app-1     hw_3_template-app   "python -u app.py"       app       About a minute ago   Up About a minute (healthy)   127.0.0.1:8080->8000/tcp
+hw_3_template-redis-1   redis:7.4-alpine    "docker-entrypoint.s…"   redis     About a minute ago   Up About a minute (healthy)   6379/tcp
+
+--- Проверка 1. Данные до пересоздания ---
+
+$ curl -sS -w \n http://127.0.0.1:8080/
+{"greeting": "Hello from Compose!", "count": 0, "hostname": "6ae5f8605134", "storage": "redis"}
+
+$ curl -sS -w \n -X POST http://127.0.0.1:8080/increment
+{"greeting": "Hello from Compose!", "count": 1, "hostname": "6ae5f8605134", "storage": "redis"}
+
+$ curl -sS -w \n -X POST http://127.0.0.1:8080/increment
+{"greeting": "Hello from Compose!", "count": 2, "hostname": "6ae5f8605134", "storage": "redis"}
+
+$ curl -sS -w \n -X POST http://127.0.0.1:8080/increment
+{"greeting": "Hello from Compose!", "count": 3, "hostname": "6ae5f8605134", "storage": "redis"}
+
+$ curl -sS -w \n http://127.0.0.1:8080/
+{"greeting": "Hello from Compose!", "count": 3, "hostname": "6ae5f8605134", "storage": "redis"}
+
+--- Проверка 1. Данные после пересоздания ---
+
+$ docker compose down
+ Container hw_3_template-app-1 Stopping 
+ Container hw_3_template-app-1 Stopped 
+ Container hw_3_template-app-1 Removing 
+ Container hw_3_template-app-1 Removed 
+ Container hw_3_template-redis-1 Stopping 
+ Container hw_3_template-redis-1 Stopped 
+ Container hw_3_template-redis-1 Removing 
+ Container hw_3_template-redis-1 Removed 
+ Network hw_3_template_default Removing 
+ Network hw_3_template_default Removed 
+
+$ docker compose up -d
+ Network hw_3_template_default Creating 
+ Network hw_3_template_default Created 
+ Container hw_3_template-redis-1 Creating 
+ Container hw_3_template-redis-1 Created 
+ Container hw_3_template-app-1 Creating 
+ Container hw_3_template-app-1 Created 
+ Container hw_3_template-redis-1 Starting 
+ Container hw_3_template-redis-1 Started 
+ Container hw_3_template-redis-1 Waiting 
+ Container hw_3_template-redis-1 Healthy 
+ Container hw_3_template-app-1 Starting 
+ Container hw_3_template-app-1 Started 
+
+$ docker compose ps
+NAME                    IMAGE               COMMAND                  SERVICE   CREATED         STATUS                                     PORTS
+hw_3_template-app-1     hw_3_template-app   "python -u app.py"       app       4 seconds ago   Up Less than a second (health: starting)   127.0.0.1:8080->8000/tcp
+hw_3_template-redis-1   redis:7.4-alpine    "docker-entrypoint.s…"   redis     4 seconds ago   Up 3 seconds (healthy)                     6379/tcp
+
+$ curl -sS -w \n http://127.0.0.1:8080/
+{"greeting": "Hello from Compose!", "count": 3, "hostname": "5a0eeb338b94", "storage": "redis"}
+
+--- Проверка 2. Redis остановлен ---
+
+$ docker compose stop redis
+ Container hw_3_template-redis-1 Stopping 
+ Container hw_3_template-redis-1 Stopped 
+
+$ curl -sS --max-time 10 -w \nHTTP %{http_code}\n http://127.0.0.1:8080/healthz
+{"status": "alive"}
+HTTP 200
+
+$ curl -sS --max-time 10 -w \nHTTP %{http_code}\n http://127.0.0.1:8080/readyz
+{"error": "storage_unavailable"}
+HTTP 503
+
+$ curl -sS --max-time 10 -w \nHTTP %{http_code}\n -X POST http://127.0.0.1:8080/increment
+{"error": "storage_unavailable"}
+HTTP 503
+
+--- Проверка 3. Redis снова запущен ---
+
+$ docker compose start redis
+ Container hw_3_template-redis-1 Starting 
+ Container hw_3_template-redis-1 Started 
+
+$ docker compose ps
+NAME                    IMAGE               COMMAND                  SERVICE   CREATED         STATUS                                     PORTS
+hw_3_template-app-1     hw_3_template-app   "python -u app.py"       app       2 minutes ago   Up 2 minutes (unhealthy)                   127.0.0.1:8080->8000/tcp
+hw_3_template-redis-1   redis:7.4-alpine    "docker-entrypoint.s…"   redis     2 minutes ago   Up Less than a second (health: starting)   6379/tcp
+
+$ curl -sS -w \nHTTP %{http_code}\n http://127.0.0.1:8080/readyz
+{"status": "ready", "storage": "redis"}
+HTTP 200
+
+$ curl -sS -w \n http://127.0.0.1:8080/
+{"greeting": "Hello from Compose!", "count": 3, "hostname": "5a0eeb338b94", "storage": "redis"}
+
+$ curl -sS -w \n -X POST http://127.0.0.1:8080/increment
+{"greeting": "Hello from Compose!", "count": 4, "hostname": "5a0eeb338b94", "storage": "redis"}
+
+$ docker compose down
+ Container hw_3_template-app-1 Stopping 
+ Container hw_3_template-app-1 Stopped 
+ Container hw_3_template-app-1 Removing 
+ Container hw_3_template-app-1 Removed 
+ Container hw_3_template-redis-1 Stopping 
+ Container hw_3_template-redis-1 Stopped 
+ Container hw_3_template-redis-1 Removing 
+ Container hw_3_template-redis-1 Removed 
+ Network hw_3_template_default Removing 
+ Network hw_3_template_default Removed 
